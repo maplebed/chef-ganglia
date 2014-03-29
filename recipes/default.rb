@@ -45,10 +45,14 @@ node['ganglia']['host_cluster'].each do |k,v|
     clusternames.push(k)
   end
 end
+# puts "1 ports is #{ports}"
+# puts "1 clusterports is #{node['ganglia']['clusterport']}"
 if ports.empty?
   ports.push(node['ganglia']['clusterport']['default'])
   clusternames.push('default')
 end
+# puts "2 ports is #{ports}"
+# puts "2 clusterports is #{node['ganglia']['clusterport']}"
 
 case node[:ganglia][:unicast]
 when true
@@ -59,7 +63,7 @@ when true
   elsif gmond_collectors.empty?
     gmond_collectors = search(:node, "role:#{node['ganglia']['server_role']} AND chef_environment:#{node.chef_environment}").map {|node| node.ipaddress}
   end rescue NoMethodError
-  if gmond_collectors.empty? 
+  if gmond_collectors.empty?
      gmond_collectors = ["127.0.0.1"]
   end
 
