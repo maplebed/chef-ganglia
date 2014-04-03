@@ -1,4 +1,0 @@
-cookbook "ganglia" do
-  configuration "default"
-  configuration "unicast"
-end

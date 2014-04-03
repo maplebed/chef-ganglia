@@ -12,5 +12,6 @@ platforms:
 suites:
   - name: default
     run_list:
-      - recipe[ganglia::default]
+      - recipe[minitest-handler]
+      - recipe[ganglia_test::default]
     attributes:
