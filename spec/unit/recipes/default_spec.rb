@@ -34,6 +34,28 @@ describe 'ganglia::default' do
       )
     end
   end
+  context "multicast mode with non-default cluster" do
+    let(:chef_run) do
+      runner = ChefSpec::Runner.new(
+        platform: 'ubuntu',
+        version: '12.04'
+      )
+      runner.node.set['ganglia']['clusterport']['test'] = 1234
+      runner.node.set['ganglia']['host_cluster'] = {
+        "default" => 0,
+        "test" => 1
+      }
+      runner.converge(described_recipe)
+    end
+    it 'writes the gmond.conf' do
+      expect(chef_run).to create_template('/etc/ganglia/gmond.conf').with(
+        variables: {
+          :cluster_name => "test",
+          :ports => [1234]
+        }
+      )
+    end
+  end
   context "unicast mode" do
     let(:chef_run) do
       runner = ChefSpec::Runner.new(
@@ -49,6 +71,29 @@ describe 'ganglia::default' do
           :cluster_name=>"default",
           :gmond_collectors=>["127.0.0.1"],
           :ports=>[18649],
+          :spoof_hostname=>false,
+          :hostname=>"Fauxhai"
+        }
+      )
+    end
+  end
+  context "unicast mode with multiple clusters" do
+    let(:chef_run) do
+      runner = ChefSpec::Runner.new(
+        platform: 'ubuntu',
+        version: '12.04'
+      )
+      runner.node.set['ganglia']['unicast'] = true
+      runner.node.set['ganglia']['clusterport']['test'] = 1234
+      runner.node.set['ganglia']['host_cluster']['test'] = 1
+      runner.converge(described_recipe)
+    end
+    it 'writes the gmond.conf' do
+      expect(chef_run).to create_template('/etc/ganglia/gmond.conf').with(
+        variables: {
+          :cluster_name=>"default",
+          :gmond_collectors=>["127.0.0.1"],
+          :ports=>[18649, 1234],
           :spoof_hostname=>false,
           :hostname=>"Fauxhai"
         }
