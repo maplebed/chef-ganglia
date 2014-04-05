@@ -128,7 +128,7 @@ describe 'ganglia::default' do
       )
     end
   end
-  # context "unicast mode with specifc gmond_collector search" do
+  # context "unicast mode with specifc gmond_collector chef-zero search" do
   #   let(:chef_run) do
   #     runner = ChefSpec::Runner.new(
   #       platform: 'ubuntu',
@@ -161,4 +161,38 @@ describe 'ganglia::default' do
   #     )
   #   end
   # end
+  context "unicast mode with specifc gmond_collector stub search" do
+    let(:chef_run) do
+      runner = ChefSpec::Runner.new(
+        platform: 'ubuntu',
+        version: '12.04',
+        #log_level: :debug
+      )
+      runner.node.set['ganglia']['unicast'] = true
+      runner.converge(described_recipe)
+    end
+    before do
+      hosts = []
+      ['host1', 'host2'].each do |host|
+        n = stub_node(platform: 'ubuntu', version: '12.04') do |node|
+          node.run_list(['role[ganglia]'])
+          node.name(host)
+          node.automatic['ipaddress'] = host
+        end
+        hosts << n
+      end
+      stub_search(:node, 'role:ganglia AND chef_environment:_default').and_return(hosts)
+    end
+    it 'writes the gmond.conf' do
+      expect(chef_run).to create_template('/etc/ganglia/gmond.conf').with(
+        variables: {
+          :cluster_name=>"default",
+          :gmond_collectors=>["host1", "host2"],
+          :ports=>[18649],
+          :spoof_hostname=>false,
+          :hostname=>"Fauxhai"
+        }
+      )
+    end
+  end
 end
