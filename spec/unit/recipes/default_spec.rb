@@ -55,7 +55,7 @@ describe 'ganglia::default' do
       )
     end
   end
-  context "unicast mode with specifc server_host" do
+  context "unicast mode with specifc server_host and nondefault cluster" do
     let(:chef_run) do
       runner = ChefSpec::Runner.new(
         platform: 'ubuntu',
@@ -63,14 +63,19 @@ describe 'ganglia::default' do
       )
       runner.node.set['ganglia']['unicast'] = true
       runner.node.set['ganglia']['server_host'] = 'ganglia.example.com'
+      runner.node.set['ganglia']['clusterport']['test'] = 1234
+      runner.node.set['ganglia']['host_cluster'] = {
+        "default" => 0,
+        "test" => 1
+      }
       runner.converge(described_recipe)
     end
     it 'writes the gmond.conf' do
       expect(chef_run).to create_template('/etc/ganglia/gmond.conf').with(
         variables: {
-          :cluster_name=>"default",
+          :cluster_name=>"test",
           :gmond_collectors=>["ganglia.example.com"],
-          :ports=>[18649],
+          :ports=>[1234],
           :spoof_hostname=>false,
           :hostname=>"Fauxhai"
         }
