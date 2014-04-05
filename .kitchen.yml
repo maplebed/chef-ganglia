@@ -15,3 +15,8 @@ suites:
       - recipe[minitest-handler]
       - recipe[ganglia_test::default]
     attributes:
+  - name: unicast
+    run_list:
+      - recipe[minitest-handler]
+      - recipe[ganglia_test::unicast]
+    attributes:
