@@ -77,6 +77,56 @@ describe 'ganglia::default' do
         }
       )
     end
+    it 'gmond.conf does not spoof hostname' do
+      expect(chef_run).to_not render_file('/etc/ganglia/gmond.conf').with_content(%Q[  override_hostname = ])
+    end
+    it 'gmond.conf has default cluster' do
+      expect(chef_run).to render_file('/etc/ganglia/gmond.conf').with_content(%Q[cluster { \n  name = "default"\n])
+    end
+    it 'gmond.conf has two udp_send stanzas' do
+      expect(chef_run).to render_file('/etc/ganglia/gmond.conf').with_content(<<-EOGMONDSEGMENT
+/* Feel free to specify as many udp_send_channels as you like.  Gmond 
+   used to only support having a single channel */ 
+udp_send_channel { 
+  host = 127.0.0.1
+  port = 18649
+  ttl = 1 
+} 
+
+/* always send to localhost */
+udp_send_channel { 
+  host = 127.0.0.1
+  port = 8649
+  ttl = 1 
+}
+EOGMONDSEGMENT
+      )
+    end
+  end
+  context "unicast mode with hostname spoofing" do
+    let(:chef_run) do
+      runner = ChefSpec::Runner.new(
+        platform: 'ubuntu',
+        version: '12.04'
+      )
+      runner.node.set['ganglia']['unicast'] = true
+      runner.node.set['ganglia']['spoof_hostname'] = true
+      runner.converge(described_recipe)
+    end
+    it 'writes the gmond.conf' do
+      expect(chef_run).to create_template('/etc/ganglia/gmond.conf').with(
+        variables: {
+          :cluster_name=>"default",
+          :gmond_collectors=>["127.0.0.1"],
+          :ports=>[18649],
+          :spoof_hostname=>true,
+          :hostname=>"Fauxhai"
+        }
+      )
+    end
+    it 'gmond.conf does spoof hostname' do
+      expect(chef_run).to render_file('/etc/ganglia/gmond.conf').with_content(%Q[  override_hostname = ])
+    end
   end
   context "unicast mode with multiple clusters" do
     let(:chef_run) do
