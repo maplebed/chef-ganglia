@@ -178,6 +178,31 @@ EOGMONDSEGMENT
       )
     end
   end
+  context "unicast mode with host_cluster that doesn't exist in clusterport" do
+    let(:chef_run) do
+      runner = ChefSpec::Runner.new(
+        platform: 'ubuntu',
+        version: '12.04'
+      )
+      runner.node.set['ganglia']['unicast'] = true
+      runner.node.set['ganglia']['host_cluster'] = {
+        "default" => 0,
+        "test" => 1
+      }
+      runner.converge(described_recipe)
+    end
+    it 'writes the gmond.conf, defaulting to the default cluster' do
+      expect(chef_run).to create_template('/etc/ganglia/gmond.conf').with(
+        variables: {
+          :cluster_name=>"default",
+          :gmond_collectors=>["127.0.0.1"],
+          :ports=>[18649],
+          :spoof_hostname=>false,
+          :hostname=>"Fauxhai"
+        }
+      )
+    end
+  end
   # context "unicast mode with specifc gmond_collector chef-zero search" do
   #   let(:chef_run) do
   #     runner = ChefSpec::Runner.new(
