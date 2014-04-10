@@ -10,6 +10,9 @@ describe 'ganglia::default' do
     runner.converge(described_recipe)
   end
 
+  it 'creates the ganglia directory' do
+    expect(chef_run).to create_directory('/etc/ganglia')
+  end
   it 'installs the ganglia monitor package' do
     expect(chef_run).to install_package('ganglia-monitor')
   end

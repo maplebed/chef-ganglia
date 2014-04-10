@@ -1,76 +1,121 @@
 require 'spec_helper'
 
 describe 'ganglia::gmond_collector' do
-  context "default config" do
-    let(:chef_run) do
-      runner = ChefSpec::Runner.new(
-        platform: 'ubuntu',
-        version: '12.04'
-      )
-      runner.converge(described_recipe)
-    end
-    it "writes only one gmond.conf" do
-      [['default', 18649]].each do |clusterpair|
-        cluster, port = clusterpair
-        expect(chef_run).to create_template("/etc/ganglia/gmond_collector_#{cluster}.conf").with(
-          variables: {
-            :cluster_name => cluster,
-            :port => port
-          }
+  {
+    "default" => [['default', 18649]],
+    "two cluster" => [['default', 18649], ['test', 1234]]
+  }.each_pair do |name, cl|
+    context "#{name} config" do
+      let(:cluster_list) { cl }
+      let(:chef_run) do
+        runner = ChefSpec::Runner.new(
+          platform: 'ubuntu',
+          version: '12.04'
         )
+        cluster_list.each do |cluster, port|
+          runner.node.set['ganglia']['clusterport'][cluster] = port
+        end
+        runner.converge(described_recipe)
       end
-    end
-    it "writes only one gmond init script" do
-      [['default', 18649]].each do |clusterpair|
-        cluster, port = clusterpair
-        expect(chef_run).to create_template("/etc/init.d/ganglia-monitor-#{cluster}").with(
-          variables: {
-            :cluster_name => cluster,
-            :port => port
-          }
-        )
+      it "writes #{name} gmond.conf" do
+        cluster_list.each do |cluster, port|
+          expect(chef_run).to create_template("/etc/ganglia/gmond_collector_#{cluster}.conf").with(
+            variables: {
+              :cluster_name => cluster,
+              :port => port
+            }
+          )
+        end
       end
-    end
-    it "starts only one gmond" do
-      ['default'].each do |cluster|
-        expect(chef_run).to start_service("ganglia-monitor-#{cluster}")
+      it "renders gmond.conf with the right port" do
+        cluster_list.each do |cluster, port|
+          expect(chef_run).to render_file("/etc/ganglia/gmond_collector_#{cluster}.conf").with_content(
+              %Q[cluster {
+  name = "#{cluster}"
+  owner = "unspecified"
+  latlong = "unspecified"
+  url = "unspecified"
+}
+
+/* The host section describes attributes of the host, like the location */
+host {
+  location = "unspecified"
+}
+
+/* You can specify as many udp_recv_channels as you like as well. */
+udp_recv_channel {
+  port = #{port}
+}
+
+/* You can specify as many tcp_accept_channels as you like to share
+   an xml description of the state of the cluster */
+tcp_accept_channel {
+  port = #{port}
+}])
+        end
+      end
+      it "writes #{name} gmond init script" do
+        cluster_list.each do |cluster, port|
+          expect(chef_run).to create_template("/etc/init.d/ganglia-monitor-#{cluster}").with(
+            variables: {
+              :cluster_name => cluster,
+              :port => port
+            }
+          )
+        end
+      end
+      it "renders #{name} gmond init script with the right cluster name" do
+        cluster_list.each do |cluster, port|
+          expect(chef_run).to render_file("/etc/init.d/ganglia-monitor-#{cluster}").with_content(
+            %Q[NAME=gmond-#{cluster}
+DESC="Ganglia Monitor Daemon"
+CONF=/etc/ganglia/gmond_collector_#{cluster}.conf
+])
+        end
+      end
+
+      it "starts #{name} gmond" do
+        cluster_list.each do |cluster, port|
+          expect(chef_run).to start_service("ganglia-monitor-#{cluster}")
+        end
       end
     end
   end
-  context "two cluster config" do
-    let(:chef_run) do
-      runner = ChefSpec::Runner.new(
-        platform: 'ubuntu',
-        version: '12.04'
-      )
-      runner.node.set['ganglia']['clusterport']['test'] = 1234
-      runner.converge(described_recipe)
-    end
-    it "writes one gmond.conf per cluster" do
-      [['default', 18649], ['test', 1234]].each do |cluster, port|
-        expect(chef_run).to create_template("/etc/ganglia/gmond_collector_#{cluster}.conf").with(
-          variables: {
-            :cluster_name => cluster,
-            :port => port
-          }
-        )
-      end
-    end
-    it "writes one gmond init script per cluster" do
-      [['default', 18649], ['test', 1234]].each do |cluster, port|
-        expect(chef_run).to create_template("/etc/init.d/ganglia-monitor-#{cluster}").with(
-          variables: {
-            :cluster_name => cluster,
-            :port => port
-          }
-        )
-      end
-    end
-    it "starts one gmond per cluster" do
-      ['default', 'test'].each do |cluster|
-        expect(chef_run).to start_service("ganglia-monitor-#{cluster}")
-      end
-    end
-  end
+  # context "two cluster config" do
+  #   let(:chef_run) do
+  #     runner = ChefSpec::Runner.new(
+  #       platform: 'ubuntu',
+  #       version: '12.04'
+  #     )
+  #     runner.node.set['ganglia']['clusterport']['test'] = 1234
+  #     runner.converge(described_recipe)
+  #   end
+  #   let(:cluster_list) { [['default', 18649], ['test', 1234]] }
+  #   it "writes one gmond.conf per cluster" do
+  #     cluster_list.each do |cluster, port|
+  #       expect(chef_run).to create_template("/etc/ganglia/gmond_collector_#{cluster}.conf").with(
+  #         variables: {
+  #           :cluster_name => cluster,
+  #           :port => port
+  #         }
+  #       )
+  #     end
+  #   end
+  #   it "writes one gmond init script per cluster" do
+  #     cluster_list.each do |cluster, port|
+  #       expect(chef_run).to create_template("/etc/init.d/ganglia-monitor-#{cluster}").with(
+  #         variables: {
+  #           :cluster_name => cluster,
+  #           :port => port
+  #         }
+  #       )
+  #     end
+  #   end
+  #   it "starts one gmond per cluster" do
+  #     cluster_list.each do |cluster, port|
+  #       expect(chef_run).to start_service("ganglia-monitor-#{cluster}")
+  #     end
+  #   end
+  # end
 end
 
