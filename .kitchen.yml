@@ -20,3 +20,8 @@ suites:
       - recipe[minitest-handler]
       - recipe[ganglia_test::unicast]
     attributes:
+  # - name: gmetad_default
+  #   run_list:
+  #     - recipe[minitest-handler]
+  #     - recipe[ganglia_test::gmetad]
+  #   attributes:
