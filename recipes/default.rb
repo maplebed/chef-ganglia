@@ -45,10 +45,14 @@ node['ganglia']['host_cluster'].each do |k,v|
     clusternames.push(k)
   end
 end
+# puts "1 ports is #{ports}"
+# puts "1 clusterports is #{node['ganglia']['clusterport']}"
 if ports.empty?
   ports.push(node['ganglia']['clusterport']['default'])
   clusternames.push('default')
 end
+# puts "2 ports is #{ports}"
+# puts "2 clusterports is #{node['ganglia']['clusterport']}"
 
 case node[:ganglia][:unicast]
 when true
