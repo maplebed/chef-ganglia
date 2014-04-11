@@ -6,7 +6,7 @@ gem 'strainer', '~> 3.3.0'
 gem 'foodcritic'
 gem 'minitest', '~> 3.0.0'
 gem 'chefspec', '~> 3.0'
-
+gem 'berkshelf'
 
 group :kitchen  do
   gem 'test-kitchen'
